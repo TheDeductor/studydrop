@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F5F2EC">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="StudyDrop">
+<title>StudyDrop</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#F5F2EC;--ink:#1C1917;--muted:#78716C;--border:#D6CFC4;--accent:#C2410C;--accent-glow:rgba(194,65,12,0.08);--white:#FDFCFA;--tag-bg:#EDE8DF;--card:#FDFCFA;--err:#DC2626;--err-bg:#FEF2F2;}
+body.dark{--bg:#141210;--ink:#EDE8DF;--muted:#6B6560;--border:#2C2825;--accent:#E05A1A;--accent-glow:rgba(224,90,26,0.1);--white:#1C1917;--tag-bg:#1F1C1A;--card:#1C1917;--err:#F87171;--err-bg:#2A1010;}
+body{background:var(--bg);color:var(--ink);font-family:'DM Mono',monospace;min-height:100dvh;display:flex;flex-direction:column;transition:background .3s,color .3s;}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;}
+.logo{font-family:'Instrument Serif',serif;font-size:1.3rem;color:var(--ink);}
+.logo em{color:var(--accent);font-style:normal;}
+.theme-toggle{width:36px;height:36px;border-radius:50%;background:var(--tag-bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .2s,transform .15s;position:relative;font-size:0.95rem;}
+.theme-toggle:hover{background:var(--border);transform:rotate(12deg);}
+.icon-sun,.icon-moon{position:absolute;transition:opacity .25s,transform .3s;}
+body:not(.dark) .icon-moon{opacity:0;transform:rotate(40deg) scale(.6);}
+body:not(.dark) .icon-sun{opacity:1;transform:rotate(0) scale(1);}
+body.dark .icon-sun{opacity:0;transform:rotate(-40deg) scale(.6);}
+body.dark .icon-moon{opacity:1;transform:rotate(0) scale(1);}
+
+main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 20px 48px;}
+.board{width:100%;max-width:420px;display:flex;flex-direction:column;}
+
+.hero{text-align:center;margin-bottom:36px;}
+.hero h1{font-family:'Instrument Serif',serif;font-size:clamp(2rem,6vw,2.8rem);font-weight:400;line-height:1.15;color:var(--ink);margin-bottom:12px;letter-spacing:-0.02em;}
+.hero h1 em{color:var(--accent);font-style:italic;}
+.hero p{font-size:0.75rem;color:var(--muted);letter-spacing:0.04em;line-height:1.8;}
+
+.tabs{display:flex;background:var(--tag-bg);border:1px solid var(--border);border-radius:12px;padding:4px;gap:4px;margin-bottom:20px;}
+.tab{flex:1;padding:9px;border:none;border-radius:8px;font-family:'DM Mono',monospace;font-size:0.73rem;letter-spacing:0.05em;cursor:pointer;background:none;color:var(--muted);transition:all .2s;}
+.tab.active{background:var(--white);color:var(--ink);border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px 24px;display:flex;flex-direction:column;gap:16px;transition:background .3s,border-color .3s;}
+.form-panel{display:none;}
+.form-panel.active{display:flex;flex-direction:column;gap:16px;}
+
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
+.field input{background:var(--tag-bg);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--ink);outline:none;transition:border-color .15s,background .15s;width:100%;}
+.field input::placeholder{color:var(--muted);opacity:.7;}
+.field input:focus{border-color:var(--ink);background:var(--white);}
+.field input.err{border-color:var(--err);}
+
+.pw-wrap{position:relative;}
+.pw-wrap input{padding-right:42px;}
+.pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:0.85rem;padding:4px;transition:color .15s;}
+.pw-eye:hover{color:var(--ink);}
+
+.strength-wrap{display:flex;flex-direction:column;gap:5px;}
+.strength-bars{display:flex;gap:4px;}
+.strength-bar{flex:1;height:3px;border-radius:100px;background:var(--border);transition:background .3s;}
+.strength-label{font-size:0.62rem;color:var(--muted);}
+
+.submit-btn{width:100%;background:var(--ink);color:var(--white);border:none;padding:13px;border-radius:12px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:0.07em;cursor:pointer;transition:opacity .15s,transform .1s;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.submit-btn:hover{opacity:.82;}
+.submit-btn:active{transform:scale(.98);}
+.submit-btn:disabled{opacity:.35;cursor:not-allowed;}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+.submit-btn.loading .spinner{display:block;}
+.submit-btn.loading .btn-text{opacity:0.7;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.err-msg{font-size:0.68rem;color:var(--err);background:var(--err-bg);border-radius:8px;padding:8px 12px;letter-spacing:0.02em;display:none;}
+.err-msg.show{display:block;}
+
+footer{text-align:center;padding:0 20px 28px;font-size:0.65rem;color:var(--muted);letter-spacing:0.04em;line-height:2;}
+
+.success-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:100;opacity:0;pointer-events:none;transition:opacity .4s;text-align:center;padding:32px;}
+.success-overlay.show{opacity:1;pointer-events:all;}
+.success-icon{font-size:2.4rem;animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.success-title{font-family:'Instrument Serif',serif;font-size:1.6rem;font-weight:400;color:var(--ink);}
+.success-sub{font-size:0.72rem;color:var(--muted);letter-spacing:0.04em;line-height:1.8;}
+.success-room{background:var(--tag-bg);border:1px solid var(--border);border-radius:12px;padding:14px 24px;display:flex;flex-direction:column;gap:4px;margin:4px 0;}
+.success-room-label{font-size:0.62rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;}
+.success-room-name{font-size:1rem;font-weight:500;color:var(--ink);}
+.success-btn{background:var(--ink);color:var(--white);border:none;padding:12px 32px;border-radius:100px;font-family:'DM Mono',monospace;font-size:0.76rem;letter-spacing:0.06em;cursor:pointer;transition:opacity .15s;margin-top:4px;}
+.success-btn:hover{opacity:.82;}
+
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:var(--white);padding:11px 22px;border-radius:100px;font-size:0.73rem;z-index:200;transition:transform .35s cubic-bezier(.34,1.1,.64,1),opacity .3s;opacity:0;white-space:nowrap;pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">Study<em>Drop</em></span>
+  <button class="theme-toggle" id="themeToggle">
+    <span class="icon-sun">☀</span>
+    <span class="icon-moon">☽</span>
+  </button>
+</header>
+<main>
+  <div class="board">
+    <div class="hero">
+      <h1>Your room.<br><em>Your notes.</em></h1>
+      <p>Create a shared space for your group.<br>Upload once — everyone has it.</p>
+    </div>
+    <div class="tabs">
+      <button class="tab active" id="tabCreate">Create room</button>
+      <button class="tab" id="tabJoin">Join room</button>
+    </div>
+    <div class="form-card">
+      <!-- CREATE -->
+      <div class="form-panel active" id="panelCreate">
+        <div class="field">
+          <label>Room name</label>
+          <input type="text" id="createName" placeholder="e.g. Room 204" maxlength="32" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="createPw" placeholder="Choose a password" maxlength="64" autocomplete="new-password">
+            <button class="pw-eye" data-target="createPw">&#128065;</button>
+          </div>
+          <div class="strength-wrap" id="strengthWrap" style="display:none">
+            <div class="strength-bars">
+              <div class="strength-bar" id="sb1"></div><div class="strength-bar" id="sb2"></div>
+              <div class="strength-bar" id="sb3"></div><div class="strength-bar" id="sb4"></div>
+            </div>
+            <span class="strength-label" id="strengthLabel"></span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Confirm password</label>
+          <div class="pw-wrap">
+            <input type="password" id="createPwConfirm" placeholder="Repeat password" maxlength="64" autocomplete="new-password">
+            <button class="pw-eye" data-target="createPwConfirm">&#128065;</button>
+          </div>
+        </div>
+        <div class="err-msg" id="createErr"></div>
+        <button class="submit-btn" id="createBtn">
+          <div class="spinner"></div>
+          <span class="btn-text">Create room &#8594;</span>
+        </button>
+      </div>
+      <!-- JOIN -->
+      <div class="form-panel" id="panelJoin">
+        <div class="field">
+          <label>Room name</label>
+          <input type="text" id="joinName" placeholder="Enter the room name" maxlength="32" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="joinPw" placeholder="Enter the password" maxlength="64" autocomplete="current-password">
+            <button class="pw-eye" data-target="joinPw">&#128065;</button>
+          </div>
+        </div>
+        <div class="err-msg" id="joinErr"></div>
+        <button class="submit-btn" id="joinBtn">
+          <div class="spinner"></div>
+          <span class="btn-text">Join room &#8594;</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</main>
+<footer>No account needed &nbsp;·&nbsp; Free forever &nbsp;·&nbsp; Share the room name &amp; password with your group</footer>
+
+<div class="success-overlay" id="successOverlay">
+  <div class="success-icon">&#127968;</div>
+  <div class="success-title" id="successTitle">Room created!</div>
+  <div class="success-sub" id="successSub">Share the name &amp; password with your roommates.</div>
+  <div class="success-room">
+    <span class="success-room-label">Room name</span>
+    <span class="success-room-name" id="successRoomName">—</span>
+  </div>
+  <button class="success-btn" id="successBtn">Go to room &#8594;</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL='https://eycvczprhfgrmxipvvla.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5Y3ZjenByaGZncm14aXB2dmxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNzUzNTIsImV4cCI6MjA4OTc1MTM1Mn0.ziglQaPmVfxhtnc_DkhJC_21uMqMJ6qV-JIoEOV5KZU';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=id=>document.getElementById(id);
+
+// dark mode
+if(localStorage.getItem('sd-theme')==='dark')document.body.classList.add('dark');
+$('themeToggle').onclick=()=>{document.body.classList.toggle('dark');localStorage.setItem('sd-theme',document.body.classList.contains('dark')?'dark':'light');};
+
+// tabs
+$('tabCreate').onclick=()=>switchTab('create');
+$('tabJoin').onclick=()=>switchTab('join');
+function switchTab(t){
+  $('tabCreate').classList.toggle('active',t==='create');
+  $('tabJoin').classList.toggle('active',t==='join');
+  $('panelCreate').classList.toggle('active',t==='create');
+  $('panelJoin').classList.toggle('active',t==='join');
+  clearErrors();
+}
+
+// pw toggle
+document.querySelectorAll('.pw-eye').forEach(btn=>{
+  btn.onclick=()=>{const i=$(btn.dataset.target);i.type=i.type==='password'?'text':'password';btn.style.opacity=i.type==='text'?'1':'0.5';};
+});
+
+// strength
+const levels=[{color:'#DC2626',label:'Weak'},{color:'#F97316',label:'Fair'},{color:'#EAB308',label:'Good'},{color:'#22C55E',label:'Strong'}];
+$('createPw').addEventListener('input',()=>{
+  const v=$('createPw').value;
+  if(!v){$('strengthWrap').style.display='none';return;}
+  $('strengthWrap').style.display='flex';
+  let s=0;if(v.length>=8)s++;if(/[A-Z]/.test(v))s++;if(/[0-9]/.test(v))s++;if(/[^A-Za-z0-9]/.test(v))s++;
+  s=Math.max(1,s);
+  [$('sb1'),$('sb2'),$('sb3'),$('sb4')].forEach((b,i)=>{b.style.background=i<s?levels[s-1].color:'var(--border)';});
+  $('strengthLabel').textContent=levels[s-1].label;
+});
+
+function clearErrors(){
+  ['createErr','joinErr'].forEach(id=>{$(id).classList.remove('show');});
+  ['createName','createPw','createPwConfirm','joinName','joinPw'].forEach(id=>{const e=$(id);if(e)e.classList.remove('err');});
+}
+function showErr(id,msg,...fields){const e=$(id);e.textContent=msg;e.classList.add('show');fields.forEach(f=>{const el=$(f);if(el)el.classList.add('err');});}
+function setLoading(btn,on){btn.disabled=on;btn.classList.toggle('loading',on);}
+
+// simple hash (good enough for demo — use bcrypt server-side in production)
+async function hashPw(pw){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// create
+$('createBtn').onclick=async()=>{
+  clearErrors();
+  const name=$('createName').value.trim();
+  const pw=$('createPw').value;
+  const pw2=$('createPwConfirm').value;
+  if(!name){showErr('createErr','Room name is required.','createName');return;}
+  if(pw.length<4){showErr('createErr','Password must be at least 4 characters.','createPw');return;}
+  if(pw!==pw2){showErr('createErr','Passwords don\'t match.','createPwConfirm');return;}
+  setLoading($('createBtn'),true);
+  // check duplicate
+  const{data:existing}=await sb.from('rooms').select('id').eq('name',name).single();
+  if(existing){showErr('createErr','Room already exists. Try joining it.','createName');setLoading($('createBtn'),false);return;}
+  const hashed=await hashPw(pw);
+  const{error}=await sb.from('rooms').insert({name,password:hashed});
+  setLoading($('createBtn'),false);
+  if(error){showErr('createErr','Could not create room. Try again.');return;}
+  showSuccess(name,'create');
+};
+
+// join
+$('joinBtn').onclick=async()=>{
+  clearErrors();
+  const name=$('joinName').value.trim();
+  const pw=$('joinPw').value;
+  if(!name){showErr('joinErr','Enter the room name.','joinName');return;}
+  if(!pw){showErr('joinErr','Enter the password.','joinPw');return;}
+  setLoading($('joinBtn'),true);
+  const{data:room}=await sb.from('rooms').select('*').eq('name',name).single();
+  if(!room){showErr('joinErr','Room not found. Check the name or create it.','joinName');setLoading($('joinBtn'),false);return;}
+  const hashed=await hashPw(pw);
+  if(room.password!==hashed){showErr('joinErr','Wrong password. Try again.','joinPw');setLoading($('joinBtn'),false);return;}
+  setLoading($('joinBtn'),false);
+  showSuccess(name,'join');
+};
+
+function showSuccess(roomName,mode){
+  $('successRoomName').textContent=roomName;
+  $('successTitle').textContent=mode==='create'?'Room created!':'Welcome back!';
+  $('successSub').textContent=mode==='create'?'Share the name & password with your roommates.':'You\'re in. Let\'s go!';
+  $('successOverlay').classList.add('show');
+}
+$('successBtn').onclick=()=>{
+  const room=$('successRoomName').textContent;
+  window.location.href='upload.html?room='+encodeURIComponent(room);
+};
+
+['createName','createPw','createPwConfirm'].forEach(id=>{const e=$(id);if(e)e.addEventListener('keydown',ev=>{if(ev.key==='Enter')$('createBtn').click();});});
+['joinName','joinPw'].forEach(id=>{const e=$(id);if(e)e.addEventListener('keydown',ev=>{if(ev.key==='Enter')$('joinBtn').click();});});
+
+function showToast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+</script>
+</body>
+</html>
